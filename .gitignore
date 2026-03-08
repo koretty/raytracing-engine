@@ -7,3 +7,6 @@
 
 # build directory
 build
+
+# test directory
+src/test/

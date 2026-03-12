@@ -12,6 +12,9 @@ public:
     void add_object(std::unique_ptr<Object> object) {
         objects.push_back(std::move(object));
     }
+    void add_material(const Material& mat) {
+        materials.push_back(mat);
+    }
     void set_background(const Color& bg) { background = bg; }
     void set_sun_direction(const Vec3& dir) { sun_direction = dir; }
 
@@ -21,13 +24,7 @@ public:
     const Vec3& get_sun_direction() const { return sun_direction; }
     Object* get_object(size_t index) { return objects[index].get(); }
     size_t get_object_count() const { return objects.size(); }
-
-    void add_material(const Material& mat) {
-        materials.push_back(mat);
-    }
-    const Material& get_material(int index) const {
-        return materials[index];
-    }
+    const Material& get_material(int index) const { return materials[index]; }
     size_t get_material_count() const { return materials.size(); }
 
 private:

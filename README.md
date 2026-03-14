@@ -155,12 +155,12 @@
 <table>
 <tr>
   <td style="text-align:center">
-    <img src="img/scatter_output2.png" width="400"><br>
-    scatter実装前
+    <img src="img/scatter_output2.png" width="400">
+    <p align="center"> scatter実装前</p>
   </td>
   <td style="text-align:center">
-    <img src="img/scatter_output3.png" width="400"><br>
-    scatter実装後
+    <img src="img/scatter_output3.png" width="400">
+    <p align="center"> scatter実装後</p>
   </td>
 </tr>
 </table>

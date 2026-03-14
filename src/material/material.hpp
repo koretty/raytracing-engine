@@ -76,8 +76,8 @@ struct Material {
     static Material glass(float ior = 1.5f) {
         return Material{Color(1.0f, 1.0f, 1.0f), 0.0f, 0.0f, 1.0f, ior, Color(0,0,0)};
     }
-    static Material gold() {
-        return Material{Color(1.0f, 0.84f, 0.0f), 1.0f, 0.1f, 0.0f, 1.0f, Color(0,0,0)};
+    static Material metal(const Color& color=Color(0.8f, 0.8f, 0.8f)) {
+        return Material{color,1.0f, 0.1f, 0.0f, 1.0f, Color(0,0,0)};
     }
     static Material matte(const Color& color) {
         return Material{color, 0.0f, 1.0f, 0.0f, 1.0f, Color(0,0,0)};

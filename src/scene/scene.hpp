@@ -16,7 +16,16 @@ public:
         materials.push_back(mat);
     }
     void set_background(const Color& bg) { background = bg; }
-    void set_sun_direction(const Vec3& dir) { sun_direction = dir; }
+    void set_sun_direction(const Vec3& dir) {
+        if (dir.near_zero()) {
+            return;
+        }
+        sun_direction = unit_vector(dir);
+    }
+    void set_sun_intensity(float i) { if (i < 0.0f) i = 0.0f; sun_intensity = i; }
+    float get_sun_intensity() const { return sun_intensity; }
+    void set_sun_color(const Color& c) { sun_color = c; }
+    const Color& get_sun_color() const { return sun_color; }
 
     bool find_closest_hit(const Ray& ray, float t_min, float t_max, HitRecord& rec) const;
 
@@ -31,5 +40,7 @@ private:
     std::vector<std::unique_ptr<Object>> objects;
     std::vector<Material> materials;
     Color background = {0.2f, 0.7f, 0.8f};
-    Vec3 sun_direction = {-1.0f, -1.0f, -1.0f};
+    Vec3 sun_direction = unit_vector(Vec3(-1.0f, -1.0f, -1.0f));
+    float sun_intensity = 1.8f;
+    Color sun_color = Color(1.0f, 0.97f, 0.92f);
 };

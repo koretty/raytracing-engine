@@ -49,20 +49,36 @@ Vec3 Renderer::trace_ray(const Ray& ray, const Scene& scene, int depth) const {
             Ray scattered(Point3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 0.0f));
             
             Color emitted = mat.emission;
+            Color direct_sun(0.0f, 0.0f, 0.0f);
+
+            Vec3 sun_dir = scene.get_sun_direction();
+            if (!sun_dir.near_zero()) {
+                Vec3 light_dir = -sun_dir;
+                float ndotl = dot(rec.normal, light_dir);
+                if (ndotl > 0.0f) {
+                    Ray shadow_ray(rec.point + rec.normal * 0.001f, light_dir);
+                    HitRecord shadow_rec;
+                    bool blocked = scene.find_closest_hit(shadow_ray, 0.001f, 1e10f, shadow_rec);
+                    if (!blocked) {
+                        Color sun_color = scene.get_sun_color();
+                        float sun_intensity = scene.get_sun_intensity();
+                        float diffuse_weight = (1.0f - mat.metallic) * (1.0f - mat.transmission);
+                        direct_sun = mat.base_color * sun_color * (sun_intensity * ndotl * diffuse_weight);
+                    }
+                }
+            }
             
             if (mat.scatter(ray, rec, attenuation, scattered)) {
-                return emitted + attenuation * trace_ray(scattered, scene, depth + 1);
+                return emitted + direct_sun + attenuation * trace_ray(scattered, scene, depth + 1);
             }
-            return emitted;
+            return emitted + direct_sun;
         }
 
         Vec3 normal = rec.normal;
         return 0.5f * Color(normal.x + 1.0f, normal.y + 1.0f, normal.z + 1.0f);
     }
 
-    Vec3 unit_direction = unit_vector(ray.getDirection());
-    float t = 0.5f * (unit_direction.y + 1.0f);
-    return (1.0f - t) * Color(1.0f, 1.0f, 1.0f) + t * scene.get_background();
+    return scene.get_background();
 }
 
 uint32_t Renderer::to_color32(const Vec3& color) const {

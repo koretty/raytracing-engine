@@ -152,16 +152,18 @@
 
 #### レンダリング結果
 
-<div style="display:flex; gap:1px;">
-  <figure style="flex:1; text-align:center;">
-    <img src="img\scatter_output2.png" width="100%"/>
-    <figcaption>scatter実装前</figcaption>
-  </figure>
-  <figure style="flex:1; text-align:center;">
-    <img src="img\scatter_output3.png" width="100%"/>
-    <figcaption>scatter実装後</figcaption>
-  </figure>
-</div>
+<table>
+<tr>
+  <td style="text-align:center">
+    <img src="img/scatter_output2.png" width="400"><br>
+    scatter実装前
+  </td>
+  <td style="text-align:center">
+    <img src="img/scatter_output3.png" width="400"><br>
+    scatter実装後
+  </td>
+</tr>
+</table>
 
 * **備考・課題:**
   * `scatter` メソッドの実装により、マテリアルの表現力が大幅に向上し、中央のガラス玉が屈折して背景が歪んで見えるようになった。

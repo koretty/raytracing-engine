@@ -39,8 +39,7 @@
   3. 物体オブジェクトの実装
   4. レンダリングの実装
   5. レンダリングの最適化
-  6. GUI統合
-  7. 最終調整・デバッグ
+  6. 最終調整・デバッグ
 ---
 
 
@@ -144,3 +143,25 @@
 * レンダリング中はCPUの全スレッドが高い使用率を維持していることが確認できた。
 * ループのスケジューリングに `dynamic` を採用したことで、画像の複雑な部分と単純な部分の負荷が各スレッドへ動的に割り当てられ、無駄な待機時間を減らして効率的に計算リソースを使い切ることができたと考えられる。
 ---
+
+### 6. 最終調整
+* **目的:** レンダリング結果の品質向上や、コードの安定性・保守性を高めるための最終的な調整とデバッグを行う。
+* **作業内容:**
+  - `Material` 構造体に `scatter` メソッドを統合し、拡散反射・鏡面反射・透過・屈折を統一的に扱えるようにする
+  - `scatter` の追加に伴う単体テストとシーン表示テストを作成して動作検証を行う
+
+#### レンダリング結果
+
+<div style="display:flex; gap:1px;">
+  <figure style="flex:1; text-align:center;">
+    <img src="img\scatter_output2.png" width="100%"/>
+    <figcaption>scatter実装前</figcaption>
+  </figure>
+  <figure style="flex:1; text-align:center;">
+    <img src="img\scatter_output3.png" width="100%"/>
+    <figcaption>scatter実装後</figcaption>
+  </figure>
+</div>
+
+* **備考・課題:**
+  * `scatter` メソッドの実装により、マテリアルの表現力が大幅に向上し、中央のガラス玉が屈折して背景が歪んで見えるようになった。

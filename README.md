@@ -39,11 +39,9 @@
 ### Installation
 
 ```bash
-git clone https://github.com/yourname/raytracing-engine.git
+git clone https://github.com/koretty/raytracing-engine
 cd raytracing-engine
 
-# 依存関係
-# SDL3 を事前にインストールして、コンパイラ/リンカから参照可能な状態にしてください
 ```
 
 ### Run
@@ -116,7 +114,7 @@ g++ -std=c++23 -O2 -fopenmp \
 .
 ├── img/                     # 出力例画像
 ├── src/
-│   ├── main/                # エントリーポイントと設定
+│   ├── main/                
 │   │   ├── main.cpp
 │   │   └── config/
 │   │       ├── camera_config.hpp

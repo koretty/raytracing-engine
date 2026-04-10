@@ -5,6 +5,7 @@
 #include "../../object/sphere.hpp"
 #include "../../environment/environment_map.hpp"
 #include <iostream>
+#include <memory>
 #include <utility>
 
 namespace config {
@@ -24,17 +25,21 @@ inline Scene create_scene() {
     sc.set_background(Color(0.60f, 0.80f, 1.00f));
 
     Material ground;
-    ground.base_color = Color(0.33f, 0.52f, 0.28f);
+    ground.albedo_texture = std::make_shared<CheckerTexture>(
+        Color(0.32f, 0.50f, 0.27f),
+        Color(0.24f, 0.38f, 0.20f),
+        0.85f
+    );
     ground.metallic = 0.0f;
     ground.roughness = 0.97f;
 
     Material brushed_metal;
-    brushed_metal.base_color = Color(0.9f, 0.85f, 0.8f);
+    brushed_metal.albedo_texture = std::make_shared<SolidColor>(Color(0.9f, 0.85f, 0.8f));
     brushed_metal.metallic = 1.0f;
     brushed_metal.roughness = 0.2f;
 
     Material glass;
-    glass.base_color = Color(0.98f, 0.99f, 1.0f);
+    glass.albedo_texture = std::make_shared<SolidColor>(Color(0.98f, 0.99f, 1.0f));
     glass.metallic = 0.0f;
     glass.roughness = 0.02f;
     glass.transmission = 1.0f;
@@ -42,7 +47,12 @@ inline Scene create_scene() {
     glass.absorption_coefficient = Color(5.0f, 5.0f, 10.0f);
 
     Material red_matte;
-    red_matte.base_color = Color(0.9f, 0.2f, 0.2f);
+    auto matte_image = std::make_shared<ImageTexture>();
+    if (matte_image->load("img/red_matte.ppm")) {
+        red_matte.albedo_texture = matte_image;
+    } else {
+        red_matte.albedo_texture = std::make_shared<SolidColor>(Color(0.9f, 0.2f, 0.2f));
+    }
     red_matte.metallic = 0.0f;
     red_matte.roughness = 0.8f;
 

@@ -124,7 +124,7 @@ Vec3 Renderer::evaluate_shadow_transmittance(const Scene& scene, const Ray& shad
             transmittance = transmittance * volume_transmittance * blocker.transmission;
         }
 #else
-        Color pass_through = blocker.base_color * blocker.transmission;
+    Color pass_through = blocker.sample_albedo(shadow_rec.u, shadow_rec.v, shadow_rec.point) * blocker.transmission;
         transmittance = transmittance * pass_through;
 #endif
 
@@ -149,7 +149,7 @@ Vec3 Renderer::trace_ray(const Ray& ray, const Scene& scene, int depth) const {
         if (rec.material_id >= 0 && static_cast<size_t>(rec.material_id) < scene.get_material_count()) {
             const Material& mat = scene.get_material(rec.material_id);
 
-            Color emitted = mat.emission;
+            Color emitted = mat.sample_emission(rec.u, rec.v, rec.point);
             Color direct_sun(0.0f, 0.0f, 0.0f);
             Vec3 wo = -unit_vector(ray.getDirection());
 

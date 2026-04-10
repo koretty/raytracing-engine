@@ -52,11 +52,10 @@ inline Color schlick_fresnel(float cos_theta, const Color& f0) {
     return f0 + (Color(1.0f, 1.0f, 1.0f) - f0) * t5;
 }
 
-inline Color compute_f0(const Material& material) {
+inline Color compute_f0(const Color& base, const Material& material) {
     float metallic = clamp01(material.metallic);
     float f0_scalar = dielectric_f0(material.ior);
     Color dielectric = Color(f0_scalar, f0_scalar, f0_scalar);
-    Color base = clamp_color01(material.base_color);
     return dielectric * (1.0f - metallic) + base * metallic;
 }
 
@@ -119,14 +118,13 @@ inline Vec3 sample_ggx_half_vector(const Vec3& n, float alpha) {
     return normalize_or(to_world(h_local, n), n);
 }
 
-inline SamplingProbabilities compute_sampling_probabilities(const Material& material) {
+inline SamplingProbabilities compute_sampling_probabilities(const Material& material, const Color& base) {
     SamplingProbabilities p;
 
     float transmission = clamp01(material.transmission);
     float reflection_budget = 1.0f - transmission;
 
-    Color base = clamp_color01(material.base_color);
-    Color f0 = compute_f0(material);
+    Color f0 = compute_f0(base, material);
 
     float diffuse_energy = std::max(0.0f, (1.0f - clamp01(material.metallic)) * luminance(base));
     float specular_energy = std::max(0.01f, luminance(f0));
@@ -173,8 +171,9 @@ BsdfSample PbrBsdf::sample(const Vec3& wo_in, const HitRecord& hit, const Materi
 
     Vec3 n = normalize_or(hit.normal, Vec3(0.0f, 1.0f, 0.0f));
     Vec3 wo = normalize_or(wo_in, n);
+    Color base = clamp_color01(material.sample_albedo(hit.u, hit.v, hit.point));
 
-    SamplingProbabilities p = compute_sampling_probabilities(material);
+    SamplingProbabilities p = compute_sampling_probabilities(material, base);
     float event = random_float();
 
     if (event < p.transmission && p.transmission > 0.0f) {
@@ -194,7 +193,7 @@ BsdfSample PbrBsdf::sample(const Vec3& wo_in, const HitRecord& hit, const Materi
             result.weight = Color(1.0f, 1.0f, 1.0f);
         } else {
             wi = refract(-wo, n, eta);
-            result.weight = clamp_color01(material.base_color) * (1.0f - fresnel);
+            result.weight = base * (1.0f - fresnel);
         }
 
         float roughness = clamp01(material.roughness);
@@ -266,7 +265,7 @@ Color PbrBsdf::eval(const Vec3& wo_in, const Vec3& wi_in, const HitRecord& hit, 
     float roughness = clamp01(material.roughness);
     float alpha = std::max(0.02f, roughness * roughness);
 
-    Color base = clamp_color01(material.base_color);
+    Color base = clamp_color01(material.sample_albedo(hit.u, hit.v, hit.point));
     Color diffuse = (1.0f - transmission) * (1.0f - metallic) * base *
                     (1.0f / 3.14159265358979323846f);
 
@@ -281,7 +280,7 @@ Color PbrBsdf::eval(const Vec3& wo_in, const Vec3& wi_in, const HitRecord& hit, 
 
     float d = ggx_distribution(n_dot_h, alpha);
     float g = smith_geometry(n_dot_o, n_dot_i, alpha);
-    Color f0 = compute_f0(material);
+    Color f0 = compute_f0(base, material);
     Color f = schlick_fresnel(o_dot_h, f0);
 
     float denominator = std::max(4.0f * n_dot_o * n_dot_i, kEpsilon);
@@ -301,7 +300,8 @@ float PbrBsdf::pdf(const Vec3& wo_in, const Vec3& wi_in, const HitRecord& hit, c
         return 0.0f;
     }
 
-    SamplingProbabilities p = compute_sampling_probabilities(material);
+    Color base = clamp_color01(material.sample_albedo(hit.u, hit.v, hit.point));
+    SamplingProbabilities p = compute_sampling_probabilities(material, base);
 
     float diffuse_pdf = n_dot_i / 3.14159265358979323846f;
     float roughness = clamp01(material.roughness);

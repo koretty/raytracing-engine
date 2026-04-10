@@ -7,6 +7,8 @@
 struct HitRecord {
     Point3 point;
     Vec3 normal;
+    float u{0.0f};
+    float v{0.0f};
     float t;
     int material_id;
     int object_id{-1};

@@ -47,29 +47,32 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
     std::cout << "[OpenMP] disabled (single-thread)\n";
 #endif
 
-    int grid_size = static_cast<int>(std::sqrt(samples_per_pixel));
-    int actual_samples = grid_size * grid_size;
-    
+    const float inv_w = 1.0f / static_cast<float>(std::max(width - 1, 1));
+    const float inv_h = 1.0f / static_cast<float>(std::max(height - 1, 1));
 
     #pragma omp parallel for schedule(dynamic)
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             Color color(0.0f, 0.0f, 0.0f);
-            for (int sy = 0; sy < grid_size; sy++) {
-                for (int sx = 0; sx < grid_size; sx++) {
-                    float offset_x = (sx + random_float()) / grid_size;
-                    float offset_y = (sy + random_float()) / grid_size;
-                    float u = (static_cast<float>(x) + offset_x) / (width - 1);
-                    float v = (static_cast<float>(y) + offset_y) / (height - 1);
-                    Ray r = camera.get_ray(u, v);
-                    color = color + trace_ray(r, scene, 0); 
-                }
+            int sample_count = std::max(samples_per_pixel, 0);
+            for (int s = 0; s < sample_count; s++) {
+                float offset_x = random_float();
+                float offset_y = random_float();
+                float u = (static_cast<float>(x) + offset_x) * inv_w;
+                float v = (static_cast<float>(y) + offset_y) * inv_h;
+                Ray r = camera.get_ray(u, v);
+                color = color + trace_ray(r, scene, 0);
             }
             int pixel_y = height - 1 - y;
-            Color pixel_color = color * (1.0f / static_cast<float>(actual_samples));
-            pixel_color.x = std::sqrt(pixel_color.x);
-            pixel_color.y = std::sqrt(pixel_color.y);
-            pixel_color.z = std::sqrt(pixel_color.z);
+            if (sample_count <= 0) {
+                pixels[pixel_y * width + x] = to_color32(Color(0.0f, 0.0f, 0.0f));
+                continue;
+            }
+
+            Color pixel_color = color * (1.0f / static_cast<float>(sample_count));
+            pixel_color.x = std::sqrt(std::max(0.0f, pixel_color.x));
+            pixel_color.y = std::sqrt(std::max(0.0f, pixel_color.y));
+            pixel_color.z = std::sqrt(std::max(0.0f, pixel_color.z));
             pixels[pixel_y * width + x] = to_color32(pixel_color);
         }
     }
@@ -149,6 +152,12 @@ Vec3 Renderer::trace_ray(const Ray& ray, const Scene& scene, int depth) const {
         if (rec.material_id >= 0 && static_cast<size_t>(rec.material_id) < scene.get_material_count()) {
             const Material& mat = scene.get_material(rec.material_id);
 
+            Color segment_transmittance(1.0f, 1.0f, 1.0f);
+            if (!rec.front_face && mat.transmission > 0.0f) {
+                float segment_distance = rec.t * ray.getDirection().length();
+                segment_transmittance = material_optics::beer_lambert_transmittance(mat, segment_distance);
+            }
+
             Color emitted = mat.sample_emission(rec.u, rec.v, rec.point);
             Color direct_sun(0.0f, 0.0f, 0.0f);
             Vec3 wo = -unit_vector(ray.getDirection());
@@ -166,11 +175,13 @@ Vec3 Renderer::trace_ray(const Ray& ray, const Scene& scene, int depth) const {
             }
 
             BsdfSample sampled = bsdf->sample(wo, rec, mat);
+            Color radiance = emitted + direct_sun;
             if (sampled.valid) {
                 Ray next_ray(rec.point + sampled.wi * 0.001f, sampled.wi);
-                return emitted + direct_sun + sampled.weight * trace_ray(next_ray, scene, depth + 1);
+                radiance = radiance + sampled.weight * trace_ray(next_ray, scene, depth + 1);
             }
-            return emitted + direct_sun;
+
+            return segment_transmittance * radiance;
         }
 
         Vec3 normal = rec.normal;

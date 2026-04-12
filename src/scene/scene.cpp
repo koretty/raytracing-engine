@@ -21,8 +21,8 @@ bool Scene::find_closest_hit(const Ray& ray, float t_min, float t_max, HitRecord
         build_bvh();
     }
 
-    if (bvh_root && bvh_root->hit(ray, t_min, t_max, rec)) {
-        return true;
+    if (bvh_root) {
+        return bvh_root->hit(ray, t_min, t_max, rec);
     }
 
     HitRecord temp_rec;

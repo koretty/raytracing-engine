@@ -178,7 +178,9 @@ BsdfSample PbrBsdf::sample(const Vec3& wo_in, const HitRecord& hit, const Materi
 
     if (event < p.transmission && p.transmission > 0.0f) {
         float clamped_ior = std::max(material.ior, 1.0001f);
-        float eta = hit.front_face ? (1.0f / clamped_ior) : clamped_ior;
+        float eta_i = hit.front_face ? 1.0f : clamped_ior;
+        float eta_t = hit.front_face ? clamped_ior : 1.0f;
+        float eta = eta_i / eta_t;
 
         float cos_theta = std::min(dot(wo, n), 1.0f);
         float sin_theta = std::sqrt(std::max(0.0f, 1.0f - cos_theta * cos_theta));
@@ -186,26 +188,28 @@ BsdfSample PbrBsdf::sample(const Vec3& wo_in, const HitRecord& hit, const Materi
 
         float f0 = dielectric_f0(clamped_ior);
         float fresnel = schlick_fresnel_scalar(cos_theta, f0);
+        float reflection_prob = cannot_refract ? 1.0f : fresnel;
+        float refraction_prob = cannot_refract ? 0.0f : (1.0f - fresnel);
+        bool choose_reflection = cannot_refract || random_float() < reflection_prob;
+        float selected_prob = choose_reflection ? reflection_prob : refraction_prob;
 
         Vec3 wi;
-        if (cannot_refract || random_float() < fresnel) {
+        Color bsdf_cos;
+        if (choose_reflection) {
             wi = reflect(-wo, n);
-            result.weight = Color(1.0f, 1.0f, 1.0f);
+            float reflectance = cannot_refract ? 1.0f : fresnel;
+            bsdf_cos = Color(reflectance, reflectance, reflectance);
         } else {
             wi = refract(-wo, n, eta);
-            result.weight = base * (1.0f - fresnel);
-        }
-
-        float roughness = clamp01(material.roughness);
-        if (roughness > 0.001f) {
-            wi = normalize_or(wi + (roughness * roughness * 0.25f) * random_in_unit_sphere(), wi);
+            float eta_scale = (eta_i * eta_i) / (eta_t * eta_t);
+            bsdf_cos = base * (refraction_prob * eta_scale);
         }
 
         result.wi = wi;
-        result.pdf = p.transmission;
+        result.pdf = p.transmission * std::max(selected_prob, kEpsilon);
         result.is_delta = true;
         result.valid = true;
-        result.weight = result.weight * (p.transmission / std::max(result.pdf, kEpsilon));
+        result.weight = bsdf_cos * (p.transmission / std::max(result.pdf, kEpsilon));
         return result;
     }
 

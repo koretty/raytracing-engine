@@ -47,6 +47,8 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
     std::cout << "[OpenMP] disabled (single-thread)\n";
 #endif
 
+    scene.prepare_acceleration();
+
     const float inv_w = 1.0f / static_cast<float>(std::max(width - 1, 1));
     const float inv_h = 1.0f / static_cast<float>(std::max(height - 1, 1));
 

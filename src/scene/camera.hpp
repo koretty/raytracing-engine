@@ -44,9 +44,24 @@ public:
     aperture(aperture), 
     lens_radius(aperture * 0.5f),
     focus_dist(focus_dist){
-        front = unit_vector(lookat - origin);
-        right = unit_vector(cross(front, view_up));
-        up = cross(right, front);
+        Vec3 forward = lookat - origin;
+        if (forward.near_zero()) {
+            forward = Vec3(0.0f, 0.0f, -1.0f);
+        }
+        front = unit_vector(forward);
+
+        Vec3 up_hint = view_up.near_zero() ? Vec3(0.0f, 1.0f, 0.0f) : view_up;
+        Vec3 right_candidate = cross(front, up_hint);
+        if (right_candidate.near_zero()) {
+            Vec3 fallback_up = (std::abs(front.y) < 0.999f)
+                ? Vec3(0.0f, 1.0f, 0.0f)
+                : Vec3(1.0f, 0.0f, 0.0f);
+            right_candidate = cross(front, fallback_up);
+        }
+        right = unit_vector(right_candidate);
+
+        Vec3 up_candidate = cross(right, front);
+        up = up_candidate.near_zero() ? Vec3(0.0f, 1.0f, 0.0f) : unit_vector(up_candidate);
         float fov_rad = fov_deg * static_cast<float>(std::numbers::pi) / 180.0f;
         viewport_v = 2.0f * tan(fov_rad * 0.5f) * focus_dist;
         viewport_h = aspect_ratio * viewport_v;

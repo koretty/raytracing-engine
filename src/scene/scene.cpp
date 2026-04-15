@@ -4,39 +4,36 @@
 void Scene::build_bvh() const {
     if (objects.empty()) {
         bvh_root.reset();
-        bvh_dirty = false;
+        bvh_dirty->store(false, std::memory_order_release);
         return;
     }
 
     bvh_root = std::make_shared<BVHNode>(objects, 0u, objects.size());
-    bvh_dirty = false;
+    bvh_dirty->store(false, std::memory_order_release);
+}
+
+void Scene::prepare_acceleration() const {
+    if (!bvh_dirty->load(std::memory_order_acquire)) {
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(*bvh_mutex);
+    if (bvh_dirty->load(std::memory_order_relaxed)) {
+        build_bvh();
+    }
 }
 
 bool Scene::find_closest_hit(const Ray& ray, float t_min, float t_max, HitRecord& rec) const {
-    if (objects.empty()) {
-        return false;
-    }
-
-    if (bvh_dirty || !bvh_root) {
-        build_bvh();
-    }
-
-    if (bvh_root) {
-        return bvh_root->hit(ray, t_min, t_max, rec);
-    }
-
-    HitRecord temp_rec;
-    bool hit_anything = false;
-    float closest_so_far = t_max;
-
-    for (size_t object_index = 0; object_index < objects.size(); ++object_index) {
-        if (objects[object_index]->hit(ray, t_min, closest_so_far, temp_rec)) {
-            hit_anything = true;
-            closest_so_far = temp_rec.t;
-            temp_rec.object_id = static_cast<int>(object_index);
-            rec = temp_rec;
+    if (bvh_dirty->load(std::memory_order_acquire)) {
+        std::lock_guard<std::mutex> lock(*bvh_mutex);
+        if (bvh_dirty->load(std::memory_order_relaxed)) {
+            build_bvh();
         }
     }
 
-    return hit_anything;
+    std::shared_ptr<Object> local_bvh = bvh_root;
+    if (local_bvh) {
+        return local_bvh->hit(ray, t_min, t_max, rec);
+    }
+    return false;
 }

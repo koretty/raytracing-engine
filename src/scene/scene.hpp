@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 #include <memory>
+#include <mutex>
+#include <atomic>
 #include <utility>
 #include "../math/ray.hpp"      
 #include "../object/object.hpp"
@@ -15,9 +17,11 @@ public:
         if (!object) {
             return;
         }
+
+        std::lock_guard<std::mutex> lock(*bvh_mutex);
         object->set_object_id(static_cast<int>(objects.size()));
         objects.push_back(std::shared_ptr<Object>(std::move(object)));
-        bvh_dirty = true;
+        bvh_dirty->store(true, std::memory_order_release);
     }
     void add_material(const Material& mat) {
         materials.push_back(mat);
@@ -49,6 +53,7 @@ public:
     void set_sun_color(const Color& c) { sun_color = c; }
     const Color& get_sun_color() const { return sun_color; }
 
+    void prepare_acceleration() const;
     bool find_closest_hit(const Ray& ray, float t_min, float t_max, HitRecord& rec) const;
 
     const Color& get_background() const { return background; }
@@ -70,5 +75,6 @@ private:
     float sun_intensity = 1.8f;
     Color sun_color = Color(1.0f, 0.97f, 0.92f);
     mutable std::shared_ptr<Object> bvh_root;
-    mutable bool bvh_dirty{true};
+    mutable std::shared_ptr<std::atomic<bool>> bvh_dirty{std::make_shared<std::atomic<bool>>(true)};
+    mutable std::shared_ptr<std::mutex> bvh_mutex{std::make_shared<std::mutex>()};
 };

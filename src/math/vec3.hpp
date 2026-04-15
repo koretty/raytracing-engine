@@ -94,7 +94,11 @@ inline Vec3 cross(const Vec3& u, const Vec3& v) {
 }
 
 inline Vec3 unit_vector(const Vec3& v) {
-    return v / v.length();
+    const float len = v.length();
+    if (len < 1e-8f) {
+        return Vec3(0.0f, 0.0f, 0.0f);
+    }
+    return v / len;
 }
 
 inline Vec3 reflect(const Vec3& v, const Vec3& n) {

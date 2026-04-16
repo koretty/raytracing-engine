@@ -1,6 +1,6 @@
 # モジュール依存関係
 
-現在のコードに合わせた依存関係です。
+現行コードに合わせた依存関係です。
 
 ```mermaid
 graph TD
@@ -8,61 +8,69 @@ graph TD
     main_cpp --> camera_cfg["src/main/config/camera_config.hpp"]
     main_cpp --> scene_cfg["src/main/config/scene_config.hpp"]
 
-    scene_cfg --> scene_mod["src/scene/scene.hpp"]
-    scene_cfg --> material_mod["src/material/material.hpp"]
-    scene_cfg --> texture_mod["src/material/texture.hpp"]
+    camera_cfg --> camera_hpp["src/scene/camera.hpp"]
+    scene_cfg --> scene_hpp["src/scene/scene.hpp"]
+    scene_cfg --> material_hpp["src/material/material.hpp"]
+    scene_cfg --> texture_hpp["src/material/texture.hpp"]
     scene_cfg --> sphere_hpp["src/object/sphere.hpp"]
     scene_cfg --> env_hpp["src/environment/environment_map.hpp"]
 
-    renderer_cpp["src/renderer/renderer.cpp"] --> bsdf_if["src/bsdf/bsdf.hpp"]
-    renderer_cpp --> bsdf_impl["src/bsdf/pbr_bsdf.hpp"]
-    renderer_cpp --> scene_mod
-    renderer_cpp --> optics_mod["src/material/optics.hpp"]
+    renderer_cpp["src/renderer/renderer.cpp"] --> renderer_hpp
+    renderer_cpp --> bsdf_if["src/bsdf/bsdf.hpp"]
+    renderer_cpp --> pbr_bsdf_hpp["src/bsdf/pbr_bsdf.hpp"]
+    renderer_cpp --> scene_hpp
+    renderer_cpp --> optics_hpp["src/material/optics.hpp"]
     renderer_cpp --> math_utils["src/math/math_utils.hpp"]
 
-    bsdf_impl_cpp["src/bsdf/pbr_bsdf.cpp"] --> bsdf_if
-    bsdf_impl_cpp --> material_mod
-    bsdf_impl_cpp --> object_abs["src/object/object.hpp"]
-    bsdf_impl_cpp --> math_utils
+    pbr_bsdf_cpp["src/bsdf/pbr_bsdf.cpp"] --> pbr_bsdf_hpp
+    pbr_bsdf_cpp --> bsdf_if
+    pbr_bsdf_cpp --> material_hpp
+    pbr_bsdf_cpp --> object_hpp["src/object/object.hpp"]
+    pbr_bsdf_cpp --> math_utils
 
-    material_mod --> texture_mod
-    texture_cpp["src/material/texture.cpp"] --> texture_mod
+    material_hpp --> texture_hpp
+    texture_cpp["src/material/texture.cpp"] --> texture_hpp
 
-    scene_cpp["src/scene/scene.cpp"] --> scene_mod
+    scene_cpp["src/scene/scene.cpp"] --> scene_hpp
     scene_cpp --> bvh_hpp["src/object/bvh.hpp"]
-    scene_mod --> object_abs
-    scene_mod --> material_mod
-    scene_mod --> env_hpp
+    scene_hpp --> object_hpp
+    scene_hpp --> material_hpp
+    scene_hpp --> env_hpp
 
     bvh_cpp["src/object/bvh.cpp"] --> bvh_hpp
-    bvh_hpp --> object_abs
+    bvh_hpp --> object_hpp
     bvh_hpp --> aabb_hpp["src/object/aabb.hpp"]
 
-    env_cpp["src/environment/environment_map.cpp"] --> env_hpp
-    env_cpp --> vec3_mod["src/math/vec3.hpp"]
-
     sphere_cpp["src/object/sphere.cpp"] --> sphere_hpp
-    sphere_hpp --> object_abs
-    object_abs --> ray_mod["src/math/ray.hpp"]
-    ray_mod --> vec3_mod
+    sphere_hpp --> object_hpp
 
-    %% External and build targets
+    env_cpp["src/environment/environment_map.cpp"] --> env_hpp
+    env_cpp --> vec3_hpp["src/math/vec3.hpp"]
+
+    object_hpp --> ray_hpp["src/math/ray.hpp"]
+    ray_hpp --> vec3_hpp
+    camera_hpp --> ray_hpp
+    camera_hpp --> math_utils
+
+    %% build/runtime dependencies
     sdl3["SDL3"]
     openmp["OpenMP"]
     core["raytracer_core (static lib)"]
     app["raytracer (executable)"]
 
-    main_cpp --> sdl3
-    renderer_cpp --> openmp
     core --> renderer_cpp
-    core --> bsdf_impl_cpp
+    core --> pbr_bsdf_cpp
+    core --> scene_cpp
+    core --> bvh_cpp
     core --> env_cpp
     app --> core
+    app --> main_cpp
+    app --> sdl3
+    renderer_cpp --> openmp
 ```
 
 要点:
 
-- `Renderer` の評価経路は `IBSDF` 抽象に依存しつつ、既定実装として `PbrBsdf` を生成可能です。
-- `Scene` は `find_closest_hit` 内で BVH を遅延構築して利用し、交差探索コストを抑えています。
-- `Scene` が `EnvironmentMap` を内包するため、miss 時の環境サンプリングは `Scene` 側へ集約されています。
-- CMake は `raytracer_core` と `raytracer` を分離しており、将来テスト追加時にコア再利用が容易です。
+- `Renderer` は `IBSDF` 抽象に依存し、具象は `PbrBsdf` が既定です。
+- `Scene` は `EnvironmentMap` を内包し、miss 時の環境取得 API を一元化しています。
+- `raytracer_core` / `raytracer` 分離により、将来のテスト追加時にコア再利用がしやすい構成です。

@@ -1,62 +1,88 @@
 # Data Flow
 
-現在実装されている主経路（初期化 -> レンダリング -> 表示）を示します。
+現行実装の主経路（初期化 -> イベントループ -> レンダリング -> 表示）を示します。
 
-- 初期化:
-    - `config::scene::create_scene()` がマテリアル・オブジェクト・太陽光を設定
-    - `environment.enabled == true` の場合に HDRI をロード
-- レンダリング:
-    - `Renderer::render(scene, camera)` が OpenMP で画素ループ
-    - 1 サンプルごとに `trace_ray` を再帰実行
-- hit 時:
-    - `Scene::find_closest_hit` が必要に応じて BVH を構築し、交差探索を実行
-    - `material.sample_albedo/emission` で材質入力を取得
-    - `bsdf.eval` で直達太陽光
-    - `evaluate_shadow_transmittance` で Beer-Lambert 減衰
-    - `bsdf.sample` で次方向を生成して再帰
-- miss 時:
-    - `Scene::sample_environment(direction)` を呼び、HDRI または背景色を返す
-- 出力:
-    - ガンマ補正後に SDL テクスチャへ転送
+## 初期化フェーズ
+
+- `config::scene::create_scene()` で以下を設定:
+    - `Material` 配列（ground / brushed_metal / glass / red_matte）
+    - `Sphere` 群（既定は benchmark グリッド）
+    - 太陽光（direction / intensity / color）
+    - `config::environment::enabled == true` の場合は `EnvironmentMap::load_hdr`
+- `Renderer(width=800, height=600, samples=100, max_depth=10)` を生成
+
+## フレーム更新フェーズ
+
+- SDL 入力でカメラ値を更新
+- 移動があったときだけ `needs_render = true`
+- `needs_render` のときのみ `Renderer::render(scene, camera)` を実行
+
+## レンダリングフェーズ
+
+- `render` 開始時に `scene.prepare_acceleration()`
+- OpenMP で画素ループし、各サンプルで `camera.get_ray(u, v)` を生成
+- `trace_ray(ray, scene, depth)` を再帰実行
+
+### trace_ray の hit 経路
+
+- `scene.find_closest_hit` で交差検索（必要時 BVH を遅延構築）
+- `material_id` が有効なら:
+    - `mat.sample_emission(rec.u, rec.v, rec.point)`
+    - 直達光: `bsdf.eval` + `evaluate_shadow_transmittance`
+    - 間接光: `bsdf.sample` で次方向を生成し再帰
+    - 屈折体内部区間（`!rec.front_face && mat.transmission > 0`）は Beer-Lambert を適用
+- `material_id` が不正な場合は法線可視化色を返す
+
+### trace_ray の miss 経路
+
+- `scene.sample_environment(ray.getDirection())`
+    - HDRI 有効時: `EnvironmentMap::sample`
+    - 無効時: `Scene::background`
+
+## 出力フェーズ
+
+- サンプル平均後にガンマ補正（`sqrt`）
+- `ARGB8888` にパックして `pixels` へ格納
+- `SDL_UpdateTexture` -> `SDL_RenderTexture` -> `SDL_RenderPresent`
 
 ```mermaid
 graph TD
-        A[App start] --> B[create_scene]
+        A[App start] --> B[config::scene::create_scene]
         B --> C{environment.enabled}
         C -->|true| D[EnvironmentMap.load_hdr]
-        C -->|false| E[use background color]
-        D --> F[Scene.set_environment_map]
+        D --> E[Scene.set_environment_map]
+        C -->|false| F[Scene uses background]
         E --> G[Scene ready]
         F --> G
 
-        H[SDL event loop] --> I[camera_config update]
-        I --> J[needs_render true]
-        J --> K[make_camera]
-        K --> L[Renderer.render]
+        G --> H[SDL event loop]
+        H --> I{camera moved?}
+        I -->|yes| J[needs_render = true]
+        I -->|no| K[skip render]
+        J --> L[make_camera]
+        L --> M[Renderer.render]
 
-        L --> M[OpenMP pixel loop]
-        M --> N[camera.get_ray]
-        N --> O[trace_ray]
+        M --> N[scene.prepare_acceleration]
+        N --> O[OpenMP pixel loop]
+        O --> P[camera.get_ray]
+        P --> Q[trace_ray]
 
-        O --> P[Scene.find_closest_hit]
-        P --> P2[BVH traversal or build]
-        P2 -->|hit| Q[material fetch]
-        P2 -->|miss| R[Scene.sample_environment]
+        Q --> R[Scene.find_closest_hit]
+        R -->|hit| S[material + bsdf shading]
+        R -->|miss| T[Scene.sample_environment]
 
-        Q --> Q2[material.sample_albedo and sample_emission]
-        Q2 --> S[bsdf.eval direct sun]
-        Q --> T[evaluate_shadow_transmittance]
-        Q --> U[bsdf.sample indirect bounce]
-        U --> O
+        S --> U[evaluate_shadow_transmittance]
+        S --> V[bsdf.sample recursive bounce]
+        V --> Q
 
-        S --> V[accumulate radiance]
-        T --> V
-        R --> V
-        V --> W[gamma correction]
-        W --> X[pixel buffer]
-        X --> Y[SDL_UpdateTexture and Present]
+        U --> W[accumulate radiance]
+        T --> W
+        W --> X[gamma correction]
+        X --> Y[pixel buffer]
+        Y --> Z[SDL_UpdateTexture / Present]
 ```
 
 補足:
 
-- `bsdf.pdf` は現在 `sample` 内の重み計算に利用され、将来の MIS 拡張にも使える形になっています。
+- 影透過は `active_media[object_id]` で入射/出射を追跡し、厚みベース減衰を計算します。
+- `bsdf.pdf` は重み計算に使われ、将来 MIS 拡張時の基盤になります。

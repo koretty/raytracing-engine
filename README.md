@@ -51,35 +51,7 @@ CPU ベースの学習向けパストレーサーです。
 - サンプル数: `100 spp`
 - 最大再帰深度: `10`
 
-## Configuration
 
-設定はヘッダ内のインライン変数で管理しています。
-
-- カメラ設定: `src/main/config/camera_config.hpp`
-- シーン設定: `src/main/config/scene_config.hpp`
-
-既定値の要点:
-
-- `config::scene::benchmark::enabled = true`
-  - 既定で `11 x 11` の球体グリッド（`grid_half_extent = 5`）を生成します。
-- `config::environment::enabled = false`
-  - 既定では HDRI 無効で背景色を使用します。
-- 画像テクスチャは既定で `img/red_matte.ppm` を読み込み、失敗時は `SolidColor` にフォールバックします。
-- 太陽光は `set_sun_direction / set_sun_intensity / set_sun_color` で設定されます。
-
-HDRI を有効化する場合は `scene_config.hpp` の `config::environment` を変更します。
-
-```cpp
-namespace config {
-namespace environment {
-
-inline bool enabled = true;
-inline const char* hdr_path = "img/environment.hdr";
-inline float intensity = 1.0f;
-
-} // namespace environment
-} // namespace config
-```
 
 補足:
 

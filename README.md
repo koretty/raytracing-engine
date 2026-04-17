@@ -1,6 +1,6 @@
 # RayTracingEngine
 
-CPU ベースの学習向けパストレーサーです。C++20 で、PBR BSDF、BVH、テクスチャ、Beer-Lambert 透過影、HDRI 環境光までを段階的に検証できる構成になっています。
+CPU ベースの学習向けパストレーサーです。
 
 ## Overview
 

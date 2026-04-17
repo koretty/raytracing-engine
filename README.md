@@ -34,41 +34,7 @@ CPU ベースの学習向けパストレーサーです。
 
 ### Build (Recommended: CMake)
 
-```bash
-git clone https://github.com/koretty/raytracing-engine
-cd raytracing-engine
 
-cmake -S . -B build
-cmake --build build -j
-```
-
-主な CMake オプション:
-
-- `-DRAYTRACER_ENABLE_BEER_LAMBERT=OFF`: Beer-Lambert 透過影を無効化
-- `-DRAYTRACER_BUILD_TESTS=ON`: `tests/CMakeLists.txt` がある場合にテストターゲットを追加
-
-ビルドターゲット:
-
-- `raytracer_core`（静的ライブラリ）: `src/main/main.cpp` 以外のコア実装
-- `raytracer`（実行ファイル）: SDL エントリーポイント
-
-### Run
-
-Windows:
-
-```powershell
-.\build\raytracer.exe
-```
-
-Linux/macOS:
-
-```bash
-./build/raytracer
-```
-
-補足:
-
-- MinGW + SDL3 環境では、`SDL3.dll` が見つかる場合に実行ファイル横へ自動コピーされます。
 
 ## Controls
 

@@ -27,12 +27,58 @@ CPU ベースの学習向けパストレーサーです。
 
 ### Requirements
 
-- CMake 3.16 以上
 - C++20 対応コンパイラ（GCC / Clang / MSVC）
-- SDL3（CMake package として検出可能な状態）
+- SDL3 開発パッケージ（ヘッダ + ライブラリ）
 - OpenMP（任意。未検出時はシングルスレッド動作）
 
-### Build (Recommended: CMake)
+### Build (Direct Command, No CMake)
+
+#### Windows (PowerShell / MSYS2 MinGW)
+
+```powershell
+g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic `
+	-I./src `
+	./src/main/main.cpp `
+	./src/bsdf/pbr_bsdf.cpp `
+	./src/environment/environment_map.cpp `
+	./src/material/texture.cpp `
+	./src/object/bvh.cpp `
+	./src/object/sphere.cpp `
+	./src/renderer/renderer.cpp `
+	./src/scene/scene.cpp `
+	-o ./raytracer.exe `
+	$(pkg-config --cflags --libs sdl3) `
+	-fopenmp
+```
+
+#### Linux / macOS (bash)
+
+```bash
+g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic \
+	-I./src \
+	./src/main/main.cpp \
+	./src/bsdf/pbr_bsdf.cpp \
+	./src/environment/environment_map.cpp \
+	./src/material/texture.cpp \
+	./src/object/bvh.cpp \
+	./src/object/sphere.cpp \
+	./src/renderer/renderer.cpp \
+	./src/scene/scene.cpp \
+	-o ./raytracer \
+	$(pkg-config --cflags --libs sdl3) \
+	-fopenmp
+```
+
+補足:
+
+- OpenMP を使わない場合は末尾の `-fopenmp` を外してください。
+- Beer-Lambert を無効化したい場合は `-DRAYTRACER_ENABLE_BEER_LAMBERT=0` を追加してください（既定は有効）。
+- Windows で実行時に `SDL3.dll` が見つからない場合は、`raytracer.exe` と同じディレクトリへ `SDL3.dll` を配置してください。
+
+### Run
+
+- Windows: `./raytracer.exe`
+- Linux / macOS: `./raytracer`
 
 
 

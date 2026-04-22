@@ -3,7 +3,10 @@
 このドキュメントでは、本プロジェクトの全体構造、使用技術、およびディレクトリ構成について記述します。
 
 ## 1. システム全体図
-システムの全体像と、各コンポーネント間の相互作用です。
+システムの全体像と、主要ファイルの役割を以下に示します。
+
+### 1.1 main.cppの役割
+`main.cpp`は、事前定義しておいた`config`を読み込み、`renderer`に橋渡しし描画を行う役割を担っています。なお、`renderer`で計算されたピクセル情報を`SDL3(外部ライブラリ)`に渡すことで、最終的な描画出力を行っています。以下の図は、`main.cpp`がどのように他のコンポーネントと連携しているかを示しています。
 
 ```mermaid
 graph TD
@@ -31,6 +34,34 @@ graph TD
     Camera -->|カメラ情報| Step1
     Renderer -->|描画関数| Step2
     SDL3-->Step3 
+
+```
+
+### 1.1 renderer.cppの役割
+`renderer.cpp`は、シーン情報とカメラ情報に基づいてレンダリング処理を実行し、ピクセル情報を生成する役割を担っています。以下の図は、`renderer.cpp`がどのように他のコンポーネントと連携しているかを示しています。
+
+```mermaid
+graph TD
+    Scene["scene.hpp"]
+    Camera["camera.hpp"]
+
+    subgraph MainContainer [" "]
+        direction TB
+
+        Title{"renderer.cpp"}
+        style Title fill:none,stroke:none,font-size:18px,font-weight:bold
+        
+        Step1["1. "]
+        Step2["2. "]
+        Step3["3. "]
+    
+        Title ~~~ Step1
+        Step1 --> Step2 --> Step3
+    end
+
+    Scene -->|シーン情報| Step1
+    Camera -->|カメラ情報| Step1
+    
 
 ```
 

@@ -37,7 +37,7 @@ graph TD
 
 ```
 
-### 1.1 renderer.cppの役割
+### 1.2 renderer.cppの役割
 `renderer.cpp`は、シーン情報とカメラ情報に基づいてレンダリング処理を実行し、ピクセル情報を生成する役割を担っています。以下の図は、`renderer.cpp`がどのように他のコンポーネントと連携しているかを示しています。
 
 ```mermaid
@@ -64,7 +64,9 @@ graph TD
     
 
 ```
-
+### 1.3 scene.cppの役割
+### 1.4 bsdf.cppの役割
+### 1.5 pbr_bsdf.cppの役割
 ## 2. 技術スタック 
 
 

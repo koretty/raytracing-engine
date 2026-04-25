@@ -51,8 +51,8 @@ graph TD
         Title{"renderer.cpp"}
         style Title fill:none,stroke:none,font-size:18px,font-weight:bold
         
-        Step1["1. "]
-        Step2["2. "]
+        Step1["1. 全ピクセルに対してループを回す"]
+        Step2["2. 1つのピクセルに対して、複数のレイを生成する"]
         Step3["3. "]
     
         Title ~~~ Step1

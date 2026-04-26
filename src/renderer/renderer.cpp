@@ -29,7 +29,7 @@ Renderer::Renderer(int width, int height, int samples_per_pixel, int max_depth)
 Renderer::Renderer(int width, int height, int samples_per_pixel, int max_depth, std::unique_ptr<IBSDF> bsdf_impl)
     : width(width),
       height(height),
-      samples_per_pixel(samples_per_pixel),
+      samples_per_pixel(std::max(1, samples_per_pixel)),
       max_depth(max_depth),
       bsdf(std::move(bsdf_impl)) {
     if (!bsdf) {
@@ -49,35 +49,34 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
 
     scene.prepare_acceleration();
 
-    const float inv_w = 1.0f / static_cast<float>(std::max(width - 1, 1));
-    const float inv_h = 1.0f / static_cast<float>(std::max(height - 1, 1));
-
     #pragma omp parallel for schedule(dynamic)
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            Color color(0.0f, 0.0f, 0.0f);
-            int sample_count = std::max(samples_per_pixel, 0);
-            for (int s = 0; s < sample_count; s++) {
-                float offset_x = random_float();
-                float offset_y = random_float();
-                float u = (static_cast<float>(x) + offset_x) * inv_w;
-                float v = (static_cast<float>(y) + offset_y) * inv_h;
-                Ray r = camera.get_ray(u, v);
-                color = color + trace_ray(r, scene, 0);
-            }
-            int pixel_y = height - 1 - y;
-            if (sample_count <= 0) {
-                pixels[pixel_y * width + x] = to_color32(Color(0.0f, 0.0f, 0.0f));
-                continue;
-            }
-
-            Color pixel_color = color * (1.0f / static_cast<float>(sample_count));
+            Color pixel_color = render_pixel(x, y, width, height, samples_per_pixel, camera, scene);
             pixel_color.x = std::sqrt(std::max(0.0f, pixel_color.x));
             pixel_color.y = std::sqrt(std::max(0.0f, pixel_color.y));
             pixel_color.z = std::sqrt(std::max(0.0f, pixel_color.z));
+            int pixel_y = height - 1 - y;
             pixels[pixel_y * width + x] = to_color32(pixel_color);
         }
     }
+}
+
+Color Renderer::render_pixel(int x, int y, int width, int height, int sample_count, const Camera& camera, const Scene& scene) const {
+    Color color(0.0f, 0.0f, 0.0f);
+    float inv_w = 1.0f / width;
+    float inv_h = 1.0f / height;
+
+    for (int s = 0; s < sample_count; s++) {
+        float offset_x = random_float();
+        float offset_y = random_float();
+        float u = (static_cast<float>(x) + offset_x) * inv_w;
+        float v = (static_cast<float>(y) + offset_y) * inv_h;
+        Ray r = camera.get_ray(u, v);
+        color = color + trace_ray(r, scene, 0);
+    }
+    
+    return color / static_cast<float>(sample_count);
 }
 
 Vec3 Renderer::evaluate_shadow_transmittance(const Scene& scene, const Ray& shadow_ray) const {

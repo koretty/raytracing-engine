@@ -28,5 +28,6 @@ private:
 
     Vec3 evaluate_shadow_transmittance(const Scene& scene, const Ray& shadow_ray) const;
     Vec3 trace_ray(const Ray& ray, const Scene& scene, int depth) const;
+    Color render_pixel(int x, int y, int width, int height, int sample_count, const Camera& camera, const Scene& scene) const;
     uint32_t to_color32(const Vec3& color) const;
 };

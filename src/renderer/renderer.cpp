@@ -79,6 +79,55 @@ Color Renderer::render_pixel(int x, int y, int width, int height, int sample_cou
     return color / static_cast<float>(sample_count);
 }
 
+Vec3 Renderer::trace_ray(const Ray& ray, const Scene& scene, int depth) const {
+    if (depth >= max_depth) {
+        return Color(0.0f, 0.0f, 0.0f);
+    }
+
+    HitRecord rec;
+    if (scene.find_closest_hit(ray, 0.001f, 1e10f, rec)) {
+        if (rec.material_id >= 0 && static_cast<size_t>(rec.material_id) < scene.get_material_count()) {
+            const Material& mat = scene.get_material(rec.material_id);
+
+            Color segment_transmittance(1.0f, 1.0f, 1.0f);
+            if (!rec.front_face && mat.transmission > 0.0f) {
+                float segment_distance = rec.t * ray.getDirection().length();
+                segment_transmittance = material_optics::beer_lambert_transmittance(mat, segment_distance);
+            }
+
+            Color emitted = mat.sample_emission(rec.u, rec.v, rec.point);
+            Color direct_sun(0.0f, 0.0f, 0.0f);
+            Vec3 wo = -unit_vector(ray.getDirection());
+
+            Vec3 sun_dir = scene.get_sun_direction();
+            if (!sun_dir.near_zero()) {
+                Vec3 wi = -unit_vector(sun_dir);
+                float n_dot_l = dot(rec.normal, wi);
+                if (n_dot_l > 0.0f) {
+                    Ray shadow_ray(rec.point + rec.normal * 0.001f, wi);
+                    Color shadow_visibility = evaluate_shadow_transmittance(scene, shadow_ray);
+                    Color f = bsdf->eval(wo, wi, rec, mat);
+                    direct_sun = f * scene.get_sun_color() * (scene.get_sun_intensity() * n_dot_l) * shadow_visibility;
+                }
+            }
+
+            BsdfSample sampled = bsdf->sample(wo, rec, mat);
+            Color radiance = emitted + direct_sun;
+            if (sampled.valid) {
+                Ray next_ray(rec.point + sampled.wi * 0.001f, sampled.wi);
+                radiance = radiance + sampled.weight * trace_ray(next_ray, scene, depth + 1);
+            }
+
+            return segment_transmittance * radiance;
+        }
+
+        Vec3 normal = rec.normal;
+        return 0.5f * Color(normal.x + 1.0f, normal.y + 1.0f, normal.z + 1.0f);
+    }
+
+    return scene.sample_environment(ray.getDirection());
+}
+
 Vec3 Renderer::evaluate_shadow_transmittance(const Scene& scene, const Ray& shadow_ray) const {
     constexpr float kShadowTMin = 0.001f;
     constexpr float kShadowTMax = 1e10f;
@@ -141,55 +190,6 @@ Vec3 Renderer::evaluate_shadow_transmittance(const Scene& scene, const Ray& shad
     }
 
     return transmittance;
-}
-
-Vec3 Renderer::trace_ray(const Ray& ray, const Scene& scene, int depth) const {
-    if (depth >= max_depth) {
-        return Color(0.0f, 0.0f, 0.0f);
-    }
-
-    HitRecord rec;
-    if (scene.find_closest_hit(ray, 0.001f, 1e10f, rec)) {
-        if (rec.material_id >= 0 && static_cast<size_t>(rec.material_id) < scene.get_material_count()) {
-            const Material& mat = scene.get_material(rec.material_id);
-
-            Color segment_transmittance(1.0f, 1.0f, 1.0f);
-            if (!rec.front_face && mat.transmission > 0.0f) {
-                float segment_distance = rec.t * ray.getDirection().length();
-                segment_transmittance = material_optics::beer_lambert_transmittance(mat, segment_distance);
-            }
-
-            Color emitted = mat.sample_emission(rec.u, rec.v, rec.point);
-            Color direct_sun(0.0f, 0.0f, 0.0f);
-            Vec3 wo = -unit_vector(ray.getDirection());
-
-            Vec3 sun_dir = scene.get_sun_direction();
-            if (!sun_dir.near_zero()) {
-                Vec3 wi = -unit_vector(sun_dir);
-                float n_dot_l = dot(rec.normal, wi);
-                if (n_dot_l > 0.0f) {
-                    Ray shadow_ray(rec.point + rec.normal * 0.001f, wi);
-                    Color shadow_visibility = evaluate_shadow_transmittance(scene, shadow_ray);
-                    Color f = bsdf->eval(wo, wi, rec, mat);
-                    direct_sun = f * scene.get_sun_color() * (scene.get_sun_intensity() * n_dot_l) * shadow_visibility;
-                }
-            }
-
-            BsdfSample sampled = bsdf->sample(wo, rec, mat);
-            Color radiance = emitted + direct_sun;
-            if (sampled.valid) {
-                Ray next_ray(rec.point + sampled.wi * 0.001f, sampled.wi);
-                radiance = radiance + sampled.weight * trace_ray(next_ray, scene, depth + 1);
-            }
-
-            return segment_transmittance * radiance;
-        }
-
-        Vec3 normal = rec.normal;
-        return 0.5f * Color(normal.x + 1.0f, normal.y + 1.0f, normal.z + 1.0f);
-    }
-
-    return scene.sample_environment(ray.getDirection());
 }
 
 uint32_t Renderer::to_color32(const Vec3& color) const {

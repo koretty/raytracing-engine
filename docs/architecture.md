@@ -54,10 +54,20 @@ graph TD
         Step1["1. 全ピクセルに対してループを回す"]
         Step2["2. 1つのピクセルに対して、複数のレイを生成する"]
         Step3["3. 1つのレイに対して一番近い交差点を求める"]
-        Step4["4. 交差点が存在する場合、bsdfを呼び出して色を計算する"]
-    
+        Step4{"4. レイが物体と交差するか？"}
+        Step5{"5. 交差した物体のマテリアル情報が正しいものか？"}
+        Step6["3. 1つのレイに対して一番近い交差点を求める"]
+        Background["背景色を返す"]
+        Normal["法線ベクトルを返す"]
+
         Title ~~~ Step1
         Step1 --> Step2 --> Step3 --> Step4
+        
+        Step4 -- Yes --> Step5
+        Step4 -- No --> Background
+
+        Step5 -- Yes --> Step6 
+        Step5 -- No --> Normal
     end
 
     Scene -->|シーン情報| Step1

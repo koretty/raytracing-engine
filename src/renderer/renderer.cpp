@@ -88,8 +88,8 @@ Vec3 Renderer::trace_ray(const Ray& ray, const Scene& scene, int depth) const {
     if (scene.find_closest_hit(ray, 0.001f, 1e10f, rec)) {
         if (rec.material_id >= 0 && static_cast<size_t>(rec.material_id) < scene.get_material_count()) {
             const Material& mat = scene.get_material(rec.material_id);
-
             Color segment_transmittance(1.0f, 1.0f, 1.0f);
+            
             if (!rec.front_face && mat.transmission > 0.0f) {
                 float segment_distance = rec.t * ray.getDirection().length();
                 segment_transmittance = material_optics::beer_lambert_transmittance(mat, segment_distance);

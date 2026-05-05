@@ -117,5 +117,8 @@ src/
 ├── renderer/
 │   ├── renderer.cpp            # レンダリング処理
 │   └── renderer.hpp            # レンダラーのインターフェース情報
+├── scene/
+│   ├── scene.cpp               # シーンの実装
+│   ├── scene.hpp               # シーンのインターフェース定義
 ```
 

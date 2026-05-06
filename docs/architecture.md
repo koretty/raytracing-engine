@@ -82,9 +82,7 @@ graph TD
 
 ```mermaid
 graph TD
-    Object["object.hpp"]
-    Material["material.hpp"]
-
+    
     subgraph MainContainer [" "]
         direction TB
 

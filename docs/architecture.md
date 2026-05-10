@@ -125,6 +125,9 @@ graph TD
 
 ```
 ### 1.3 bvh.cppの役割
+`bvh.cpp`は、BVH（Bounding Volume Hierarchy）を構築し、シーン内のオブジェクトの空間的な階層構造を管理する役割を担っています。以下の図は、`bvh.cpp`がどのように他のコンポーネントと連携しているかを示しています。
+
+```mermaid
 
 ## 2. 技術スタック 
 
